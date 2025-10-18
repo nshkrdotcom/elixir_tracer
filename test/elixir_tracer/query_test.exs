@@ -1,5 +1,6 @@
 defmodule ElixirTracer.QueryTest do
-  use ElixirTracer.SupertesterCase, async: true
+  # SHARED STORAGE - must be sync
+  use ElixirTracer.SupertesterCase, async: false
 
   describe "Query.get_transactions/1" do
     setup do

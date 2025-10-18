@@ -1,6 +1,12 @@
 defmodule ElixirTracer.SupertesterCase do
   @moduledoc """
-  SupertesterCase for ElixirTracer tests - Zero Process.sleep, 100% async:true
+  SupertesterCase for ElixirTracer tests.
+
+  CRITICAL: With async:true, we CANNOT use shared global storage.
+  Each test must have isolated storage or run sync.
+
+  For now: Force async:false for tests that use Storage.
+  Future: Implement per-test isolated storage backends.
   """
 
   use ExUnit.CaseTemplate
@@ -23,7 +29,11 @@ defmodule ElixirTracer.SupertesterCase do
         Process.delete(:elixir_tracer_transaction)
         Process.delete(:elixir_tracer_current_span)
 
-        # Storage is started by Application, just clear data
+        # IMPORTANT: Storage.clear_all() is NOT safe with async:true
+        # because all tests share the same DETS tables.
+        # Tests that query storage MUST use async:false OR
+        # we need per-test storage isolation (TODO)
+
         Storage.clear_all()
 
         :ok

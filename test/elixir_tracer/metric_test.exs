@@ -1,5 +1,6 @@
 defmodule ElixirTracer.MetricTest do
-  use ElixirTracer.SupertesterCase, async: true
+  # SHARED STORAGE - must be sync
+  use ElixirTracer.SupertesterCase, async: false
 
   describe "Metric.Reporter" do
     test "report_metric creates metric" do

@@ -1,5 +1,6 @@
 defmodule ElixirTracer.ErrorTest do
-  use ElixirTracer.SupertesterCase, async: true
+  # SHARED STORAGE - must be sync
+  use ElixirTracer.SupertesterCase, async: false
 
   describe "Error.Reporter" do
     test "notice_error captures exception details" do

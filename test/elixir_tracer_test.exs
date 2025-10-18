@@ -1,5 +1,6 @@
 defmodule ElixirTracerTest do
-  use ElixirTracer.SupertesterCase, async: true
+  # SHARED STORAGE - must be sync
+  use ElixirTracer.SupertesterCase, async: false
 
   describe "Transaction API" do
     test "start and stop transaction" do
