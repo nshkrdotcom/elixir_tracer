@@ -4,7 +4,6 @@ defmodule ElixirTracer.QueryTest do
 
   describe "Query.get_transactions/1" do
     setup do
-      # Create test transactions
       Transaction.Reporter.start_transaction(:web, "/slow")
       :timer.sleep(50)
       Transaction.Reporter.stop_transaction()
@@ -34,11 +33,9 @@ defmodule ElixirTracer.QueryTest do
     end
 
     test "filter by status" do
-      # All should be completed
       completed = Query.get_transactions(status: :completed)
       assert length(completed) == 3
 
-      # None should be in progress
       in_progress = Query.get_transactions(status: :in_progress)
       assert length(in_progress) == 0
     end
@@ -76,7 +73,10 @@ defmodule ElixirTracer.QueryTest do
       assert hd(txs).type == :web
       assert hd(txs).duration_ms >= 50
     end
+  end
 
+  describe "Query.get_spans/1" do
+    setup do
       Span.Reporter.report_span(name: "Span1", duration_s: 0.1, category: :generic)
       Span.Reporter.report_span(name: "Span2", duration_s: 0.2, category: :datastore)
       Span.Reporter.report_span(name: "Span3", duration_s: 0.3, category: :http)
