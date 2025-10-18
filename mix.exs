@@ -95,7 +95,8 @@ defmodule ElixirTracer.MixProject do
         "README.md",
         "API_EXAMPLES.md",
         "NEW_RELIC_FEATURE_ANALYSIS.md",
-        "CHANGELOG.md"
+        "CHANGELOG.md",
+        "LICENSE"
       ],
       groups_for_extras: [
         "Getting Started": ["README.md", "API_EXAMPLES.md"],
