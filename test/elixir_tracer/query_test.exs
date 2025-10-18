@@ -174,7 +174,7 @@ defmodule ElixirTracer.QueryTest do
       assert stats.metrics >= 1
       assert stats.custom_events >= 1
       assert stats.storage_type == "DETS"
-      assert stats.storage_path == "priv/dets"
+      assert stats.storage_path == "test/fixtures/dets"
     end
   end
 
