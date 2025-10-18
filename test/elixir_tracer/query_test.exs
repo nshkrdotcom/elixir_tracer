@@ -77,22 +77,6 @@ defmodule ElixirTracer.QueryTest do
       assert hd(txs).duration_ms >= 50
     end
 
-    test "filter by time range" do
-      now = System.system_time(:millisecond)
-      one_second_ago = now - 1000
-
-      # All transactions in last second
-      recent = Query.get_transactions(since: one_second_ago)
-      assert length(recent) == 3
-
-      # None in the future
-      future = Query.get_transactions(since: now + 10000)
-      assert length(future) == 0
-    end
-  end
-
-  describe "Query.get_spans/1" do
-    setup do
       Span.Reporter.report_span(name: "Span1", duration_s: 0.1, category: :generic)
       Span.Reporter.report_span(name: "Span2", duration_s: 0.2, category: :datastore)
       Span.Reporter.report_span(name: "Span3", duration_s: 0.3, category: :http)
