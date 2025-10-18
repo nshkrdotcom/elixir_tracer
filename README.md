@@ -1199,7 +1199,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Support
 
-- 📖 [API Examples](API_EXAMPLES.md)
 - 📊 [New Relic Feature Analysis](NEW_RELIC_FEATURE_ANALYSIS.md)
 - 🐛 [Issues](https://github.com/nshkrdotcom/elixir_tracer/issues)
 

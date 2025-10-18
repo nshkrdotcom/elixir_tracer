@@ -67,7 +67,7 @@ defmodule ElixirTracer.MixProject do
       name: "elixir_tracer",
       description: description(),
       files:
-        ~w(lib .formatter.exs mix.exs README.md LICENSE CHANGELOG.md API_EXAMPLES.md NEW_RELIC_FEATURE_ANALYSIS.md assets),
+        ~w(lib .formatter.exs mix.exs README.md LICENSE CHANGELOG.md NEW_RELIC_FEATURE_ANALYSIS.md assets),
       licenses: ["MIT"],
       links: %{
         "GitHub" => @source_url,
@@ -93,13 +93,12 @@ defmodule ElixirTracer.MixProject do
       logo: "assets/elixir_tracer.svg",
       extras: [
         "README.md",
-        "API_EXAMPLES.md",
         "NEW_RELIC_FEATURE_ANALYSIS.md",
         "CHANGELOG.md",
         "LICENSE"
       ],
       groups_for_extras: [
-        "Getting Started": ["README.md", "API_EXAMPLES.md"],
+        "Getting Started": ["README.md"],
         Reference: ["NEW_RELIC_FEATURE_ANALYSIS.md"],
         "Release Notes": ["CHANGELOG.md"]
       ],
