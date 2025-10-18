@@ -66,14 +66,19 @@ defmodule ElixirTracer.MixProject do
     [
       name: "elixir_tracer",
       description: description(),
-      files: ~w(lib .formatter.exs mix.exs README.md LICENSE CHANGELOG.md),
+      files:
+        ~w(lib .formatter.exs mix.exs README.md LICENSE CHANGELOG.md API_EXAMPLES.md NEW_RELIC_FEATURE_ANALYSIS.md assets),
       licenses: ["MIT"],
       links: %{
         "GitHub" => @source_url,
         "Online documentation" => "https://hexdocs.pm/elixir_tracer",
         "Changelog" => "#{@source_url}/blob/master/CHANGELOG.md"
       },
-      maintainers: ["nshkrdotcom"]
+      maintainers: ["nshkrdotcom"],
+      exclude_patterns: [
+        "priv/plts",
+        ".DS_Store"
+      ]
     ]
   end
 
@@ -84,6 +89,8 @@ defmodule ElixirTracer.MixProject do
       source_ref: "v#{@version}",
       source_url: @source_url,
       homepage_url: @source_url,
+      assets: %{"assets" => "assets"},
+      logo: "assets/elixir_tracer.svg",
       extras: [
         "README.md",
         "API_EXAMPLES.md",
@@ -94,6 +101,34 @@ defmodule ElixirTracer.MixProject do
         "Getting Started": ["README.md", "API_EXAMPLES.md"],
         Reference: ["NEW_RELIC_FEATURE_ANALYSIS.md"],
         "Release Notes": ["CHANGELOG.md"]
+      ],
+      groups_for_modules: [
+        "Core API": [
+          ElixirTracer,
+          ElixirTracer.Transaction,
+          ElixirTracer.OtherTransaction,
+          ElixirTracer.Span,
+          ElixirTracer.Error,
+          ElixirTracer.Metric,
+          ElixirTracer.Query,
+          ElixirTracer.DistributedTrace
+        ],
+        Reporters: [
+          ElixirTracer.Transaction.Reporter,
+          ElixirTracer.Span.Reporter,
+          ElixirTracer.Error.Reporter,
+          ElixirTracer.Metric.Reporter,
+          ElixirTracer.CustomEvent.Reporter
+        ],
+        "Telemetry Handlers": [
+          ElixirTracer.Telemetry.PhoenixHandler,
+          ElixirTracer.Telemetry.PlugHandler,
+          ElixirTracer.Telemetry.EctoHandler
+        ],
+        Infrastructure: [
+          ElixirTracer.Application,
+          ElixirTracer.Storage
+        ]
       ]
     ]
   end
