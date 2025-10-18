@@ -37,6 +37,7 @@ defmodule ElixirTracer.Metric do
       total_exclusive_time: m1.total_exclusive_time + m2.total_exclusive_time,
       min_call_time: min(m1.min_call_time, m2.min_call_time),
       max_call_time: max(m1.max_call_time, m2.max_call_time),
+      # Sum of squares adds
       sum_of_squares: m1.sum_of_squares + m2.sum_of_squares
     }
   end

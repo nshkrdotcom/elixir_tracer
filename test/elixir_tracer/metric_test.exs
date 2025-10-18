@@ -66,7 +66,8 @@ defmodule ElixirTracer.MetricTest do
       assert_in_delta metric.total_call_time, 0.45, 0.001
       assert metric.min_call_time == 0.1
       assert metric.max_call_time == 0.2
-      assert_in_delta metric.sum_of_squares, 0.0625, 0.001
+      # sum_of_squares calculation: 0.1^2 + 0.2^2 + 0.15^2 = 0.0725
+      assert_in_delta metric.sum_of_squares, 0.0725, 0.001
     end
 
     test "different metrics stored separately" do
