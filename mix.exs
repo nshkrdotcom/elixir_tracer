@@ -17,13 +17,20 @@ defmodule ElixirTracer.MixProject do
       docs: docs(),
       name: "ElixirTracer",
       source_url: @source_url,
-      homepage_url: @source_url
+      homepage_url: @source_url,
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.html": :test
+      ]
     ]
   end
 
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger, :crypto],
+      mod: {ElixirTracer.Application, []}
     ]
   end
 
@@ -32,13 +39,18 @@ defmodule ElixirTracer.MixProject do
 
   defp deps do
     [
+      # Core dependencies
       {:telemetry, "~> 1.0"},
       {:jason, "~> 1.4", optional: true},
+
+      # Testing with Supertester
+      {:supertester, "~> 0.2.1", only: :test},
 
       # Development and testing
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.4", only: [:dev], runtime: false}
+      {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
+      {:excoveralls, "~> 0.18", only: :test}
     ]
   end
 
@@ -74,11 +86,13 @@ defmodule ElixirTracer.MixProject do
       homepage_url: @source_url,
       extras: [
         "README.md",
-        "CHANGELOG.md",
-        "LICENSE"
+        "API_EXAMPLES.md",
+        "NEW_RELIC_FEATURE_ANALYSIS.md",
+        "CHANGELOG.md"
       ],
       groups_for_extras: [
-        "Getting Started": ["README.md"],
+        "Getting Started": ["README.md", "API_EXAMPLES.md"],
+        Reference: ["NEW_RELIC_FEATURE_ANALYSIS.md"],
         "Release Notes": ["CHANGELOG.md"]
       ]
     ]

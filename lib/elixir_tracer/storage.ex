@@ -1,23 +1,16 @@
 defmodule ElixirTracer.Storage do
   @moduledoc """
   Unified DETS storage for all observability data.
-
-  Stores:
-  - Transactions (web & other)
-  - Spans
-  - Errors
-  - Metrics
-  - Custom Events
   """
   use GenServer
   require Logger
 
   @dets_dir "priv/dets"
-  @transactions_table :ed_transactions
-  @spans_table :ed_spans
-  @errors_table :ed_errors
-  @metrics_table :ed_metrics
-  @events_table :ed_custom_events
+  @transactions_table :et_transactions
+  @spans_table :et_spans
+  @errors_table :et_errors
+  @metrics_table :et_metrics
+  @events_table :et_custom_events
 
   ## Client API
 
@@ -38,7 +31,6 @@ defmodule ElixirTracer.Storage do
   def get_custom_events(opts \\ []), do: GenServer.call(__MODULE__, {:get_custom_events, opts})
 
   def clear_all, do: GenServer.cast(__MODULE__, :clear_all)
-
   def get_stats, do: GenServer.call(__MODULE__, :get_stats)
 
   ## Server Callbacks
@@ -55,8 +47,7 @@ defmodule ElixirTracer.Storage do
       events: open_table(@events_table, "events.dets")
     }
 
-    Logger.info("ElixirDashboard Storage initialized: #{@dets_dir}")
-
+    Logger.info("ElixirTracer Storage initialized: #{@dets_dir}")
     {:ok, tables}
   end
 
@@ -84,7 +75,7 @@ defmodule ElixirTracer.Storage do
 
   def handle_cast({:store_metric, metric}, state) do
     key = {metric.name, metric.scope}
-    # Metrics are aggregated, not timestamped
+
     case :dets.lookup(state.metrics, key) do
       [{^key, existing}] ->
         merged = ElixirTracer.Metric.merge(existing, metric)
@@ -106,23 +97,23 @@ defmodule ElixirTracer.Storage do
 
   def handle_cast(:clear_all, state) do
     Enum.each(Map.values(state), &:dets.delete_all_objects/1)
-    Logger.info("Cleared all ElixirDashboard data")
+    Logger.info("Cleared all ElixirTracer data")
     {:noreply, state}
   end
 
   @impl true
   def handle_call({:get_transactions, opts}, _from, state) do
-    items = fetch_items(state.transactions, opts)
+    items = fetch_items(state.transactions, opts, :start_time)
     {:reply, items, state}
   end
 
   def handle_call({:get_spans, opts}, _from, state) do
-    items = fetch_items(state.spans, opts)
+    items = fetch_items(state.spans, opts, :timestamp)
     {:reply, items, state}
   end
 
   def handle_call({:get_errors, opts}, _from, state) do
-    items = fetch_items(state.errors, opts)
+    items = fetch_items(state.errors, opts, :timestamp)
     {:reply, items, state}
   end
 
@@ -131,13 +122,14 @@ defmodule ElixirTracer.Storage do
       state.metrics
       |> :dets.match({:"$1", :"$2"})
       |> Enum.map(fn [_key, metric] -> metric end)
-      |> apply_filters(opts)
+      |> apply_sort(opts[:sort])
+      |> limit_items(opts[:limit])
 
     {:reply, metrics, state}
   end
 
   def handle_call({:get_custom_events, opts}, _from, state) do
-    items = fetch_items(state.events, opts)
+    items = fetch_items(state.events, opts, :timestamp)
     {:reply, items, state}
   end
 
@@ -169,27 +161,22 @@ defmodule ElixirTracer.Storage do
     table
   end
 
-  defp fetch_items(table, opts) do
+  defp fetch_items(table, opts, timestamp_field) do
     table
     |> :dets.match({:"$1", :"$2"})
     |> Enum.map(fn [_key, item] -> item end)
-    |> apply_filters(opts)
-  end
-
-  defp apply_filters(items, opts) do
-    items
-    |> filter_by_time(opts[:since], opts[:until])
+    |> filter_by_time(opts[:since], opts[:until], timestamp_field)
     |> filter_by_type(opts[:type])
     |> filter_by_status(opts[:status])
-    |> sort_items(opts[:sort])
+    |> apply_sort(opts[:sort])
     |> limit_items(opts[:limit])
   end
 
-  defp filter_by_time(items, nil, nil), do: items
+  defp filter_by_time(items, nil, nil, _field), do: items
 
-  defp filter_by_time(items, since, until) do
+  defp filter_by_time(items, since, until, field) do
     Enum.filter(items, fn item ->
-      ts = item.start_time || item.timestamp
+      ts = Map.get(item, field)
       (since == nil || ts >= since) && (until == nil || ts <= until)
     end)
   end
@@ -198,17 +185,31 @@ defmodule ElixirTracer.Storage do
   defp filter_by_type(items, type), do: Enum.filter(items, &(&1.type == type))
 
   defp filter_by_status(items, nil), do: items
-  defp filter_by_status(items, status), do: Enum.filter(items, &(&1.status == status))
+  defp filter_by_status(items, status), do: Enum.filter(items, &(Map.get(&1, :status) == status))
 
-  defp sort_items(items, nil), do: Enum.sort_by(items, &(&1.start_time || &1.timestamp), :desc)
+  defp apply_sort(items, nil), do: items
 
-  defp sort_items(items, :duration_desc),
-    do: Enum.sort_by(items, &(&1.duration_ms || &1.duration_s), :desc)
+  defp apply_sort(items, :duration_desc) do
+    Enum.sort_by(
+      items,
+      fn item ->
+        Map.get(item, :duration_ms) || Map.get(item, :duration_s, 0) * 1000
+      end,
+      :desc
+    )
+  end
 
-  defp sort_items(items, :duration_asc),
-    do: Enum.sort_by(items, &(&1.duration_ms || &1.duration_s), :asc)
+  defp apply_sort(items, :duration_asc) do
+    Enum.sort_by(
+      items,
+      fn item ->
+        Map.get(item, :duration_ms) || Map.get(item, :duration_s, 0) * 1000
+      end,
+      :asc
+    )
+  end
 
-  defp sort_items(items, _), do: items
+  defp apply_sort(items, _), do: items
 
   defp limit_items(items, nil), do: items
   defp limit_items(items, limit), do: Enum.take(items, limit)

@@ -1,21 +1,15 @@
 defmodule ElixirTracer.Transaction.Reporter do
   @moduledoc """
   Transaction Reporter - tracks active transactions per process.
-
-  Uses process dictionary to store transaction context, matching New Relic's approach.
   """
 
-  alias ElixirTracer.Transaction
-  alias ElixirTracer.Storage
+  alias ElixirTracer.{Transaction, Storage}
 
   @transaction_key :elixir_tracer_transaction
   @span_key :elixir_tracer_current_span
 
   ## Transaction Lifecycle
 
-  @doc """
-  Start a new transaction. Returns :collect if successful, :ignore if already in transaction.
-  """
   def start_transaction(type, name) do
     case Process.get(@transaction_key) do
       nil ->
@@ -44,9 +38,6 @@ defmodule ElixirTracer.Transaction.Reporter do
     end
   end
 
-  @doc """
-  Stop and record the current transaction.
-  """
   def stop_transaction do
     case Process.get(@transaction_key) do
       nil ->
@@ -63,10 +54,7 @@ defmodule ElixirTracer.Transaction.Reporter do
             status: if(tx.error, do: :error, else: :completed)
         }
 
-        # Store in DETS
         Storage.store_transaction(completed_tx)
-
-        # Clear from process dict
         Process.delete(@transaction_key)
 
         {:ok, completed_tx}
@@ -75,28 +63,25 @@ defmodule ElixirTracer.Transaction.Reporter do
 
   ## Transaction Attributes
 
-  @doc """
-  Set the name of the current transaction.
-  """
   def set_transaction_name(name) do
     update_transaction(fn tx -> %{tx | name: name} end)
   end
 
-  @doc """
-  Add custom attributes to the current transaction.
-  Supports nested data structures via auto-flattening.
-  """
-  def add_attributes(attributes) when is_list(attributes) or is_map(attributes) do
-    flattened = flatten_attributes(attributes)
+  def add_attributes(attributes) when is_list(attributes) do
+    # Convert keyword list to map
+    attrs_map = Map.new(attributes)
 
     update_transaction(fn tx ->
-      %{tx | custom_attributes: Map.merge(tx.custom_attributes, flattened)}
+      %{tx | custom_attributes: Map.merge(tx.custom_attributes, attrs_map)}
     end)
   end
 
-  @doc """
-  Increment numeric attributes (for counters).
-  """
+  def add_attributes(attributes) when is_map(attributes) do
+    update_transaction(fn tx ->
+      %{tx | custom_attributes: Map.merge(tx.custom_attributes, attributes)}
+    end)
+  end
+
   def incr_attributes(attributes) when is_list(attributes) or is_map(attributes) do
     update_transaction(fn tx ->
       new_attrs =
@@ -108,33 +93,21 @@ defmodule ElixirTracer.Transaction.Reporter do
     end)
   end
 
-  @doc """
-  Ignore the current transaction (it won't be reported).
-  """
   def ignore_transaction do
     Process.delete(@transaction_key)
     :ignored
   end
 
-  @doc """
-  Exclude the current process from the parent transaction.
-  """
   def exclude_from_transaction do
     Process.delete(@transaction_key)
     Process.delete(@span_key)
     :excluded
   end
 
-  @doc """
-  Get a reference to the current transaction for manual connection.
-  """
   def get_transaction do
     Process.get(@transaction_key)
   end
 
-  @doc """
-  Connect the current process to an existing transaction.
-  """
   def connect_to_transaction(tx_ref) when is_struct(tx_ref, Transaction) do
     Process.put(@transaction_key, tx_ref)
     :connected
@@ -142,9 +115,6 @@ defmodule ElixirTracer.Transaction.Reporter do
 
   def connect_to_transaction(_), do: :invalid_transaction
 
-  @doc """
-  Disconnect from the current transaction.
-  """
   def disconnect_from_transaction do
     Process.delete(@transaction_key)
     :disconnected
@@ -152,9 +122,6 @@ defmodule ElixirTracer.Transaction.Reporter do
 
   ## Span Management
 
-  @doc """
-  Add a trace segment (span) to the current transaction.
-  """
   def add_trace_segment(segment) do
     span_id = generate_id()
 
@@ -172,23 +139,18 @@ defmodule ElixirTracer.Transaction.Reporter do
       %{tx | spans: [span | tx.spans]}
     end)
 
-    # Set as current span for nesting
     Process.put(@span_key, span_id)
     span_id
   end
 
   ## Error Management
 
-  @doc """
-  Record an error in the current transaction.
-  """
   def record_error(error, custom_attrs \\ %{}) do
     update_transaction(fn tx ->
       error_data = %{
         type: error_type(error),
         message: Exception.message(error),
-        stacktrace:
-          Exception.format_stacktrace(Process.info(self(), :current_stacktrace) |> elem(1)),
+        stacktrace: "",
         timestamp: System.system_time(:millisecond),
         custom_attributes: custom_attrs
       }
@@ -199,9 +161,6 @@ defmodule ElixirTracer.Transaction.Reporter do
 
   ## Metric Management
 
-  @doc """
-  Track a metric in the current transaction.
-  """
   def track_metric({identifier, values}) do
     update_transaction(fn tx ->
       metric_key = metric_key(identifier)
@@ -254,32 +213,4 @@ defmodule ElixirTracer.Transaction.Reporter do
   defp metric_key({:external, host, method}), do: "External/#{host}/#{method}"
   defp metric_key({:function, module, function}), do: "Function/#{module}/#{function}"
   defp metric_key(name) when is_binary(name), do: name
-
-  defp flatten_attributes(attrs, prefix \\ "")
-
-  defp flatten_attributes(map, prefix) when is_map(map) do
-    map
-    |> Enum.take(10)
-    |> Enum.flat_map(fn {k, v} ->
-      key = if prefix == "", do: to_string(k), else: "#{prefix}.#{k}"
-      flatten_attributes(v, key)
-    end)
-    |> Map.new()
-    |> Map.put("#{prefix}.size", map_size(map))
-  end
-
-  defp flatten_attributes(list, prefix) when is_list(list) do
-    list
-    |> Enum.take(10)
-    |> Enum.with_index()
-    |> Enum.flat_map(fn {v, i} ->
-      flatten_attributes(v, "#{prefix}.#{i}")
-    end)
-    |> Map.new()
-    |> Map.put("#{prefix}.length", length(list))
-  end
-
-  defp flatten_attributes(value, prefix) do
-    %{prefix => inspect(value)}
-  end
 end
