@@ -5,7 +5,7 @@ defmodule ElixirTracer.Storage do
   use GenServer
   require Logger
 
-  @dets_dir "priv/dets"
+  @dets_dir Application.compile_env(:elixir_tracer, :storage_path, "priv/dets")
   @transactions_table :et_transactions
   @spans_table :et_spans
   @errors_table :et_errors
